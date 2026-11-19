@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (n0deforge fork)
+
+- Tailscale peers from the os-tailscale plugin, sent in the WireGuard section as interface `tailscale0` (name, Tailscale IPs, handshake, transfer, direct endpoint). Needs the plugin's `Tailscale` privilege, which is broader than read-only; documented in the privilege table.
+
 ## opnsense/v0.1.0-n0de.2 (n0deforge fork)
 
 - WAN latency and loss from dpinger gateway status (`Status: Gateways`).

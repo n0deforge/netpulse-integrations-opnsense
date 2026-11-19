@@ -38,7 +38,7 @@ flowchart LR
 | Devices | IPv4 ARP table; most devices unnamed | ARP, DHCP leases from Kea, dnsmasq or ISC, and the hostname OPNsense resolves for each ARP entry; offline devices stay known through their leases |
 | WAN | Rates only when the interface is named by hand | WAN interface detected (PPPoE included), public IP, gateway, DNS, rates, and latency and loss from dpinger |
 | VLANs and networks | None | Every assigned subnet as a named network with its VLAN tag; every device tagged with its VLAN, Wi-Fi clients included (server fork) |
-| WireGuard | Not possible: the panel only reads OpenWrt over SSH | Peers, handshakes and transfer from the OPNsense API, with alerts and 30-day history (new payload section, server fork) |
+| WireGuard and Tailscale | Not possible: the panel only reads OpenWrt over SSH | WireGuard peers and Tailscale tailnet devices (as `tailscale0`), with handshakes and transfer from the OPNsense API, alerts and 30-day history (new payload section, server fork) |
 | Access points | Not supported unless they run OpenWrt or a supported vendor firmware | `wifictl-pusher`: each AP managed by a self-hosted controller becomes a unit with board, firmware, uptime, radios, clients, signal and ping |
 | Topology | One live map | Live, wired, Wi-Fi, per-VLAN and per-AP views (server fork) |
 | 24 h WAN total | About 24x too high on a fresh install | Fixed (server fork) |
@@ -54,7 +54,8 @@ flowchart LR
   - device names from the ARP table hostname
   - WAN latency and loss from gateway monitoring
   - networks (name, subnet, VLAN tag) and the VLAN of every ARP entry
-  - WireGuard peers into the new `wireguard` payload section
+  - WireGuard peers into the new `wireguard` payload section, and Tailscale
+    peers from the os-tailscale plugin as interface `tailscale0`
 - **`wifictl/`**, new: reads a self-hosted Wi-Fi controller and pushes one
   unit per access point. Built for a T18-21K Pro and an ASUS in AP mode,
   neither of which NetPulse could read before.

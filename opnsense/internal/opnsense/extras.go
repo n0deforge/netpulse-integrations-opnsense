@@ -491,3 +491,106 @@ func arpVLANs(arpDevs map[string]string) map[string]int {
 	}
 	return out
 }
+
+// ---- Tailscale ---------------------------------------------------------------
+
+// tailscaleStatusPath returns `tailscale status --json` from the os-tailscale
+// plugin (its only status endpoint). The plugin has a single privilege,
+// "Tailscale", which also covers its settings and service endpoints; the
+// pusher only ever reads this one.
+const tailscaleStatusPath = "/api/tailscale/status/status"
+
+type tsPeer struct {
+	PublicKey     string   `json:"PublicKey"`
+	HostName      string   `json:"HostName"`
+	DNSName       string   `json:"DNSName"`
+	TailscaleIPs  []string `json:"TailscaleIPs"`
+	Online        bool     `json:"Online"`
+	LastHandshake string   `json:"LastHandshake"`
+	RxBytes       int64    `json:"RxBytes"`
+	TxBytes       int64    `json:"TxBytes"`
+	CurAddr       string   `json:"CurAddr"`
+}
+
+type tsStatus struct {
+	BackendState string            `json:"BackendState"`
+	Self         *tsPeer           `json:"Self"`
+	Peer         map[string]tsPeer `json:"Peer"`
+	Error        string            `json:"error"`
+}
+
+func (p *Poller) tailscale(ctx context.Context) []probe.WireGuardPeer {
+	var st tsStatus
+	if err := p.get(ctx, tailscaleStatusPath, &st); err != nil {
+		return nil
+	}
+	return parseTailscale(st)
+}
+
+// parseTailscale maps tailnet peers onto WireGuard peer rows. Tailscale runs
+// WireGuard underneath and reports the same facts per peer: last handshake and
+// cumulative bytes. A peer that is online in the control plane but idle has no
+// recent handshake and therefore shows as inactive, exactly as an idle
+// WireGuard peer does. The direct endpoint is reported only when the link is
+// not relayed through DERP. Returns nil when Tailscale is not running.
+func parseTailscale(st tsStatus) []probe.WireGuardPeer {
+	if st.Error != "" || (st.BackendState != "" && st.BackendState != "Running") {
+		return nil
+	}
+	keys := make([]string, 0, len(st.Peer))
+	for k := range st.Peer {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	peers := []probe.WireGuardPeer{}
+	for _, k := range keys {
+		tp := st.Peer[k]
+		key := tp.PublicKey
+		if key == "" {
+			key = k
+		}
+		name := strings.SplitN(strings.TrimSuffix(tp.DNSName, "."), ".", 2)[0]
+		if name == "" {
+			name = tp.HostName
+		}
+		var allowed []string
+		for _, ip := range tp.TailscaleIPs {
+			if a := net.ParseIP(ip); a != nil {
+				if a.To4() != nil {
+					allowed = append(allowed, a.String()+"/32")
+				} else {
+					allowed = append(allowed, a.String()+"/128")
+				}
+			}
+		}
+		var hs int64
+		if t, err := time.Parse(time.RFC3339Nano, tp.LastHandshake); err == nil && t.Year() > 1970 {
+			hs = t.Unix()
+		}
+		peers = append(peers, probe.WireGuardPeer{
+			Interface:     "tailscale0",
+			PublicKey:     key,
+			Name:          name,
+			Endpoint:      tp.CurAddr,
+			AllowedIPs:    strings.Join(allowed, ","),
+			LastHandshake: hs,
+			RxBytes:       tp.RxBytes,
+			TxBytes:       tp.TxBytes,
+		})
+	}
+	return peers
+}
+
+// mergeTailscale adds the tailnet as interface tailscale0 to the WireGuard
+// section, creating the section when WireGuard itself is not readable.
+func mergeTailscale(wg *probe.WireGuardData, ts []probe.WireGuardPeer) *probe.WireGuardData {
+	if ts == nil {
+		return wg
+	}
+	if wg == nil {
+		wg = &probe.WireGuardData{Interfaces: []string{}, Peers: []probe.WireGuardPeer{}}
+	}
+	wg.Interfaces = append(wg.Interfaces, "tailscale0")
+	wg.Peers = append(wg.Peers, ts...)
+	return wg
+}

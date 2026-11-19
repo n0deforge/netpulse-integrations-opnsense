@@ -114,3 +114,50 @@ func TestNetworksAndVLANs(t *testing.T) {
 		t.Fatalf("vlans = %v", v)
 	}
 }
+
+func TestParseTailscale(t *testing.T) {
+	var st tsStatus
+	if err := json.Unmarshal([]byte(`{
+	 "Version":"1.80.0","BackendState":"Running",
+	 "Self":{"PublicKey":"nodekey:self","HostName":"fw","DNSName":"fw.example-tailnet.ts.net.","TailscaleIPs":["100.64.0.1"],"Online":true},
+	 "Peer":{
+	  "nodekey:bbbb":{"PublicKey":"nodekey:bbbb","HostName":"Laptop","DNSName":"laptop.example-tailnet.ts.net.",
+	   "TailscaleIPs":["100.64.0.2","fd7a:115c:a1e0::2"],"Online":true,"LastHandshake":"2027-01-15T10:00:00.123Z",
+	   "RxBytes":1048576,"TxBytes":2048,"CurAddr":"192.0.2.10:41641","Relay":"nyc"},
+	  "nodekey:aaaa":{"PublicKey":"nodekey:aaaa","HostName":"phone","DNSName":"",
+	   "TailscaleIPs":["100.64.0.3"],"Online":false,"LastHandshake":"0001-01-01T00:00:00Z","RxBytes":0,"TxBytes":0,"CurAddr":"","Relay":"nyc"}}}`), &st); err != nil {
+		t.Fatal(err)
+	}
+	peers := parseTailscale(st)
+	if len(peers) != 2 {
+		t.Fatalf("peers = %d", len(peers))
+	}
+	// sorted by node key: aaaa first
+	if p := peers[0]; p.Name != "phone" || p.LastHandshake != 0 || p.Endpoint != "" || p.AllowedIPs != "100.64.0.3/32" {
+		t.Fatalf("idle peer = %+v", p)
+	}
+	if p := peers[1]; p.Name != "laptop" || p.Interface != "tailscale0" || p.AllowedIPs != "100.64.0.2/32,fd7a:115c:a1e0::2/128" ||
+		p.LastHandshake != mustUnix(t, "2027-01-15T10:00:00Z") ||
+		p.RxBytes != 1048576 || p.Endpoint != "192.0.2.10:41641" {
+		t.Fatalf("active peer = %+v", p)
+	}
+	if parseTailscale(tsStatus{BackendState: "Stopped"}) != nil || parseTailscale(tsStatus{Error: "not running"}) != nil {
+		t.Fatal("stopped tailscale must be absent")
+	}
+	wg := mergeTailscale(nil, peers)
+	if len(wg.Interfaces) != 1 || wg.Interfaces[0] != "tailscale0" || len(wg.Peers) != 2 {
+		t.Fatalf("merge = %+v", wg)
+	}
+	if mergeTailscale(nil, nil) != nil {
+		t.Fatal("no tailscale, no wireguard: section must stay absent")
+	}
+}
+
+func mustUnix(t *testing.T, s string) int64 {
+	t.Helper()
+	tm, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tm.Unix()
+}

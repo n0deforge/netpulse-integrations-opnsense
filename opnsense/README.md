@@ -30,6 +30,7 @@ All best effort: a missing plugin or privilege (403/404) drops that section and 
 - *fork* Device names from the hostname OPNsense resolves for each ARP entry, sent as `discovery.hostByIp`. Names appear even without a DHCP lease privilege.
 - *fork* WAN latency and loss from dpinger (`routes/gateway/status`): the gateway whose address is the WAN gateway, else one named WAN. Feeds the WAN card and the health score.
 - *fork* Every assigned IPv4 subnet (VLANs, LAN, MGMT) as a NetPulse network with its name, CIDR and VLAN tag, and the VLAN each ARP MAC is seen on (`vlan0.10` gives 10). NetPulse uses them for device VLANs, per-network client lists and the per-VLAN topology view.
+- *fork* Tailscale peers from the os-tailscale plugin (`tailscale/status/status`, the plugin's `tailscale status --json`), added to the WireGuard section as interface `tailscale0`: device name, Tailscale IPs, last handshake, cumulative transfer and the direct endpoint when the link is not relayed. Tailscale runs WireGuard underneath, so the NetPulse WireGuard panel, alerts and 30-day history apply unchanged. A peer that is online but idle has no recent handshake and shows as inactive, like an idle WireGuard peer.
 - *fork* WireGuard peers from `wireguard/service/show`: interface, peer name, endpoint, allowed IPs, last handshake and cumulative transfer, sent in the `wireguard` payload section. The NetPulse server needs [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) to read it; an upstream server ignores the field.
 
 ## Deliberate omissions and unresolved behavior
@@ -59,6 +60,7 @@ no more:
 | `Status: DHCP leases` | `dhcpv4/leases/searchLease` (*fork*, optional, legacy ISC DHCP) |
 | `VPN: WireGuard` | `wireguard/service/show` (*fork*, optional, WireGuard peers) |
 | `Status: Gateways` | `routes/gateway/status` (*fork*, optional, WAN latency and loss) |
+| `Tailscale` | `tailscale/status/status` (*fork*, optional, Tailscale peers). **Broader than needed:** the plugin has one privilege that also covers its settings, service and authentication endpoints, which can change the configuration. The pusher only reads the status endpoint; grant it only if that trade-off is acceptable |
 
 Per-client traffic needs one of the two traffic privileges above. `Reporting: Traffic` works out of the box (it samples with iftop). `Diagnostics: Network Insight` gives exact byte totals but only has data once **Reporting > NetFlow** captures the LAN-side interfaces with *Capture local* enabled. Set `OPNSENSE_TRAFFIC_INTERFACES` to the logical names of those interfaces (`opt2,opt3,...`), not just `lan`.
 

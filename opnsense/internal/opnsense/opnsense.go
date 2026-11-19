@@ -367,7 +367,7 @@ func (p *Poller) Poll(ctx context.Context) (*probe.PayloadData, error) {
 		}
 	}
 	data.DHCP = p.dhcpLeases(ctx)
-	data.WireGuard = p.wireguard(ctx)
+	data.WireGuard = mergeTailscale(p.wireguard(ctx), p.tailscale(ctx))
 	data.Arp, data.ArpDevs, data.ArpStale = parseARP(arp)
 	if vlans := arpVLANs(data.ArpDevs); len(vlans) > 0 && data.FDB != nil {
 		// VLAN on which the firewall sees each routed MAC. The server uses it

@@ -939,7 +939,7 @@ func TestNewDefaultsTheTrafficInterface(t *testing.T) {
 // tests serve 404 for them, which must not fail or alter the base payload.
 func optionalPath(p string) bool {
 	switch p {
-	case keaLeasesPath, dnsmasqLeasesPath, iscLeasesPath, ifOverviewPath, wireguardShowPath, gatewayStatusPath:
+	case keaLeasesPath, dnsmasqLeasesPath, iscLeasesPath, ifOverviewPath, wireguardShowPath, gatewayStatusPath, tailscaleStatusPath:
 		return true
 	}
 	return false
