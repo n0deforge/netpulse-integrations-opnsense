@@ -1,5 +1,14 @@
 # Changelog
 
+## opnsense/v0.1.0-n0de.1 (n0deforge fork)
+
+- DHCP leases from Kea, dnsmasq and ISC, merged by MAC; expired leases dropped, reservations kept.
+- Interface overview: WAN device, IPv4, gateway and DNS; WAN autodetected when `OPNSENSE_WAN_INTERFACE` is empty; port labels from the assigned interface description and speed from the media string; LAN MAC as bridge MAC and all interface MACs announced.
+- Device names from the ARP table hostname, sent as `discovery.hostByIp`.
+- WireGuard peers from `wireguard/service/show` in the new `wireguard` payload section (needs the netpulse-opnsense server).
+- Base tests serve 404 for the optional endpoints, so their absence is covered.
+- Validated against OPNsense 26.1.11 (PPPoE WAN, dnsmasq DHCP with 42 leases, one WireGuard client tunnel, 25 ARP entries over six VLANs).
+
 ## Unreleased
 
 - Added the first beta read-only OPNsense pusher, based on official API documentation and synthetic fixtures.

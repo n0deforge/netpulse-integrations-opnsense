@@ -2,6 +2,8 @@
 
 Status: **beta, validated against OPNsense 26.7 in a VM and on a user unit, still pending a stable tag**. The implementation is based on the official OPNsense API documentation and response shapes in the official OPNsense Core source, and it was checked end to end against a fresh OPNsense 26.7 VM with a real API key and a local ingest endpoint. A user then ran it against a real 26.7 unit and filed #53, #55 and #56, all addressed on main. Fixtures are captured from those systems, plus a quoted variant that older releases may produce. Beta packaging makes the integration available for testing; it does not claim stable support yet.
 
+The [n0deforge fork](https://github.com/n0deforge/netpulse-integrations-opnsense) adds DHCP leases, the interface overview, ARP hostnames and WireGuard peers (marked *fork* below). Those were validated against **OPNsense 26.1.11** on a VLAN-segmented home network with PPPoE WAN, dnsmasq DHCP and a WireGuard client tunnel.
+
 ## Implemented coverage
 
 - HTTPS API requests with the API key and secret in HTTP Basic Auth.
@@ -19,13 +21,22 @@ Status: **beta, validated against OPNsense 26.7 in a VM and on a user unit, stil
 
 All requests use GET. The integration does not write OPNsense configuration, install firmware or perform upgrades.
 
+### Fork additions
+
+All best effort: a missing plugin or privilege (403/404) drops that section and never fails the push.
+
+- *fork* DHCP leases from Kea (`kea/leases4/search`), dnsmasq (`dnsmasq/leases/search`) and ISC (`dhcpv4/leases/searchLease`), merged by MAC. Expired leases are dropped; reservations without an expiry are kept.
+- *fork* Interface overview (`interfaces/overview/interfacesInfo`): the `wan` interface gives the WAN device, IPv4, gateway and DNS, and is used for WAN rates when `OPNSENSE_WAN_INTERFACE` is empty. Ports get the assigned interface description as label and the negotiated speed from the media string. The `lan` MAC becomes the bridge MAC and every interface MAC is announced, so the firewall is never drawn as a client.
+- *fork* Device names from the hostname OPNsense resolves for each ARP entry, sent as `discovery.hostByIp`. Names appear even without a DHCP lease privilege.
+- *fork* WireGuard peers from `wireguard/service/show`: interface, peer name, endpoint, allowed IPs, last handshake and cumulative transfer, sent in the `wireguard` payload section. The NetPulse server needs [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) to read it; an upstream server ignores the field.
+
 ## Deliberate omissions and unresolved behavior
 
-- No interface is assumed to be WAN. Without explicit selection, WAN metadata and traffic rates are omitted.
+- No interface is assumed to be WAN. Without explicit selection, WAN metadata and traffic rates are omitted. *Fork:* the interface OPNsense assigns as `wan` is used when the overview is readable.
 - The first WAN poll establishes a counter baseline and emits no rate. Counter resets also emit no rate for that sample.
-- Link state, negotiated speed and WAN IP/gateway/DNS are not inferred from interface statistics.
+- Link state, negotiated speed and WAN IP/gateway/DNS are not inferred from interface statistics. *Fork:* they come from the interface overview instead. A PPPoE WAN has no media, so its port reports no speed.
 - NDP/IPv6 neighbor data is not mixed into the IPv4-only ARP payload.
-- DHCP leases, aliases and gateways are outside this first slice.
+- Aliases and gateway monitoring are outside this first slice. *Fork:* DHCP leases are covered.
 
 ## API privileges
 
@@ -40,6 +51,11 @@ no more:
 | `Lobby: Dashboard` | `diagnostics/system/system_information` |
 | `Diagnostics: Network Insight` | `diagnostics/networkinsight/top` (optional, exact per-client totals) |
 | `Reporting: Traffic` | `diagnostics/traffic/top` (optional, per-client traffic fallback) |
+| `Status: Interfaces` | `interfaces/overview/interfacesInfo` (*fork*, optional, WAN details, port labels and speed) |
+| `Services: Dnsmasq DNS/DHCP` | `dnsmasq/leases/search` (*fork*, optional, DHCP leases on dnsmasq) |
+| `Services: Kea DHCP` | `kea/leases4/search` (*fork*, optional, DHCP leases on Kea) |
+| `Status: DHCP leases` | `dhcpv4/leases/searchLease` (*fork*, optional, legacy ISC DHCP) |
+| `VPN: WireGuard` | `wireguard/service/show` (*fork*, optional, WireGuard peers) |
 
 `System: Firmware` is not needed, even though `core/firmware/status` answers 403
 without it. Every request the pusher makes lives in the `diagnostics` module. The
