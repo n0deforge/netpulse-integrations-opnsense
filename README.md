@@ -1,5 +1,24 @@
 # netpulse-integrations
 
+> [!NOTE]
+> **n0deforge fork.** This repository follows
+> [gnacho/netpulse-integrations](https://github.com/gnacho/netpulse-integrations)
+> on `main` and carries its own work on the `opnsense` branch:
+>
+> - **`opnsense/`** reads more of the firewall: DHCP leases (Kea, dnsmasq, ISC),
+>   WAN and interface details, device names from the ARP table and WireGuard
+>   peers.
+> - **`wifictl/`** is new: it turns every access point managed by a self-hosted
+>   Wi-Fi controller into a NetPulse unit with radios and clients.
+> - **[`deploy/docker`](deploy/docker)** runs NetPulse and both pushers with one
+>   compose file, using the
+>   [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) server
+>   so WireGuard peers reach the dashboard.
+>
+> Releases follow upstream's per-integration tags (`opnsense/v0.1.0-n0de.1`,
+> `wifictl/v0.1.0`) and also publish a pushers image to GHCR. Everything else
+> below is upstream's README.
+
 External agents for router families that do not belong in the NetPulse core.
 
 NetPulse supports two router sources in its own code: the native OpenWrt agent and generic SNMP. Vendor APIs, credentials and firmware quirks live here instead, one directory per family. A small supervisor runs one or more vendor pollers and sends signed data to `POST /api/ingest/agent`.
@@ -12,9 +31,10 @@ This keeps the NetPulse server small and avoids shipping code for hardware the c
 |---|---|---|
 | `routeros/` | RouterOS binary API on port 8728, REST fallback | RouterOS 7+: system, Ethernet ports, DHCP, ARP, bridge FDB, temperature, flash, firmware state and WAN rates |
 | `bbox/` | Bbox local HTTPS API | System, WAN, active hosts and Ethernet port rates |
-| `opnsense/` | OPNsense HTTPS API, read-only, **beta** | System, interface counters announced as ports, IPv4 ARP, WAN rates with an explicitly selected interface, per-client traffic, memory, the hottest temperature sensor, uptime, load average and CPU usage. Validated against OPNsense 26.7 in a VM and on a user unit |
+| `opnsense/` | OPNsense HTTPS API, read-only, **beta** | System, interface counters announced as ports, IPv4 ARP, WAN rates with an explicitly selected interface, per-client traffic, memory, the hottest temperature sensor, uptime, load average and CPU usage. Validated against OPNsense 26.7 in a VM and on a user unit. *Fork:* DHCP leases, WAN and interface details, ARP hostnames and WireGuard peers, validated against OPNsense 26.1.11 |
 | `asuswrt/` | Local Asuswrt/Merlin probes | System, wireless, DHCP, ARP, FDB, LLDP, interfaces and WAN data exposed by the firmware |
 | `unifi/` | UniFi controller REST API, read-only | Gateways, switches and APs of one site: FDB ports and uplink attachments, wireless clients, ARP identities and gateway uptime |
+| `wifictl/` | Self-hosted Wi-Fi controller REST API, read-only, **fork** | One unit per managed AP: board, firmware, uptime, controller ping, one radio per band (channel, width, clients) and associated clients with band and signal. Validated with a T18-21K Pro and an ASUS RT-AC68U in AP mode |
 | `fn/` | Switch web JSON backend (`/cgi/get.cgi?cmd=...`) plus its SSH CLI | Realtek RTL930x SDK managed switches (FN SWITCH 8 PRO and siblings): CPU load, port speeds, octet counters, FDB, LLDP neighbors, model, firmware, uptime; fan temperature and memory bytes from the CLI |
 
 All integrations are read-only: they read router data and do not change
@@ -47,6 +67,13 @@ directories and the release workflow.
   integration config, never in the NetPulse server.
 - **Hardware-specific ownership.** Each integration has its own maintainer,
   who can validate it on supported hardware.
+
+## Docker (fork)
+
+[`deploy/docker`](deploy/docker) has a compose file for NetPulse plus the
+OPNsense and Wi-Fi controller pushers, env examples and a `register.sh` helper
+that creates the external units and their tokens. Follow its README; the rest
+of this section is the upstream binary install.
 
 ## Install
 

@@ -1,0 +1,43 @@
+name: Bug report
+description: Something an integration in this fork reports wrong, or a pusher that fails
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For integrations that are unchanged from upstream (routeros, asuswrt, bbox, fn, unifi), report at
+        [gnacho/netpulse-integrations](https://github.com/gnacho/netpulse-integrations/issues). Remove API keys,
+        tokens, public IPs and MAC addresses from anything you paste.
+  - type: dropdown
+    id: integration
+    attributes:
+      label: Integration
+      options: [opnsense, wifictl, deploy/docker]
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Pusher tag or image digest, NetPulse version, firmware version (e.g. OPNsense 26.1.11)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What NetPulse shows and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Pusher log
+      description: "`docker compose logs --tail 50 opnsense-pusher` (or wifictl-pusher)"
+      render: text
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Redacted API response
+      description: The vendor response for the section that is wrong. Fixtures are what turn a report into a test.
+      render: json

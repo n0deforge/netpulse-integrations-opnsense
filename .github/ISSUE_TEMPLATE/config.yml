@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Upstream integrations
+    url: https://github.com/gnacho/netpulse-integrations/issues
+    about: RouterOS, Asuswrt, Bbox, FN and UniFi are maintained upstream.
+  - name: NetPulse server
+    url: https://github.com/gnacho/netpulse/issues
+    about: Server and UI issues not related to the WireGuard payload.
