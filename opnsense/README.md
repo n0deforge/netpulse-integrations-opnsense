@@ -2,7 +2,7 @@
 
 Status: **beta, validated against OPNsense 26.7 in a VM and on a user unit, still pending a stable tag**. The implementation is based on the official OPNsense API documentation and response shapes in the official OPNsense Core source, and it was checked end to end against a fresh OPNsense 26.7 VM with a real API key and a local ingest endpoint. A user then ran it against a real 26.7 unit and filed #53, #55 and #56, all addressed on main. Fixtures are captured from those systems, plus a quoted variant that older releases may produce. Beta packaging makes the integration available for testing; it does not claim stable support yet.
 
-The [n0deforge fork](https://github.com/n0deforge/netpulse-integrations-opnsense) adds DHCP leases, the interface overview, ARP hostnames and WireGuard peers (marked *fork* below). Those were validated against **OPNsense 26.1.11** on a VLAN-segmented home network with PPPoE WAN, dnsmasq DHCP and a WireGuard client tunnel.
+The [n0deforge fork](https://github.com/n0deforge/netpulse-integrations-opnsense) adds DHCP leases, the interface overview, ARP hostnames and WireGuard peers (marked *fork* below). Those were validated against **OPNsense 26.1.11** on a VLAN-segmented home network with PPPoE WAN, dnsmasq DHCP, a WireGuard client tunnel and a 7-device Tailscale tailnet.
 
 ## Implemented coverage
 
@@ -28,7 +28,7 @@ All best effort: a missing plugin or privilege (403/404) drops that section and 
 - *fork* DHCP leases from Kea (`kea/leases4/search`), dnsmasq (`dnsmasq/leases/search`) and ISC (`dhcpv4/leases/searchLease`), merged by MAC. Expired leases are dropped; reservations without an expiry are kept.
 - *fork* Interface overview (`interfaces/overview/interfacesInfo`): the `wan` interface gives the WAN device, IPv4, gateway and DNS, and is used for WAN rates when `OPNSENSE_WAN_INTERFACE` is empty. Ports get the assigned interface description as label and the negotiated speed from the media string. The `lan` MAC becomes the bridge MAC and every interface MAC is announced, so the firewall is never drawn as a client.
 - *fork* Device names from the hostname OPNsense resolves for each ARP entry, sent as `discovery.hostByIp`. Names appear even without a DHCP lease privilege.
-- *fork* WAN latency and loss from dpinger (`routes/gateway/status`): the gateway whose address is the WAN gateway, else one named WAN. Feeds the WAN card and the health score.
+- *fork* WAN latency and loss from dpinger (`routes/gateway/status`, privilege `System: Gateways`): the gateway whose address is the WAN gateway, else one named WAN. Feeds the WAN card and the health score.
 - *fork* Every assigned IPv4 subnet (VLANs, LAN, MGMT) as a NetPulse network with its name, CIDR and VLAN tag, and the VLAN each ARP MAC is seen on (`vlan0.10` gives 10). NetPulse uses them for device VLANs, per-network client lists and the per-VLAN topology view.
 - *fork* Tailscale peers from the os-tailscale plugin (`tailscale/status/status`, the plugin's `tailscale status --json`), added to the WireGuard section as interface `tailscale0`: device name, Tailscale IPs, last handshake, cumulative transfer and the direct endpoint when the link is not relayed. Tailscale runs WireGuard underneath, so the NetPulse WireGuard panel, alerts and 30-day history apply unchanged. A peer that is online but idle has no recent handshake and shows as inactive, like an idle WireGuard peer.
 - *fork* WireGuard peers from `wireguard/service/show`: interface, peer name, endpoint, allowed IPs, last handshake and cumulative transfer, sent in the `wireguard` payload section. The NetPulse server needs [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) to read it; an upstream server ignores the field.
@@ -59,7 +59,7 @@ no more:
 | `Services: Kea DHCP` | `kea/leases4/search` (*fork*, optional, DHCP leases on Kea) |
 | `Status: DHCP leases` | `dhcpv4/leases/searchLease` (*fork*, optional, legacy ISC DHCP) |
 | `VPN: WireGuard` | `wireguard/service/show` (*fork*, optional, WireGuard peers) |
-| `Status: Gateways` | `routes/gateway/status` (*fork*, optional, WAN latency and loss) |
+| `System: Gateways` | `routes/gateway/status` (*fork*, optional, WAN latency and loss). **Broader than needed:** OPNsense attaches the status endpoint only to this privilege, which also covers `routing/settings/*` and can change gateway configuration. `Status: Gateways` does not cover it. The pusher only reads the status |
 | `Tailscale` | `tailscale/status/status` (*fork*, optional, Tailscale peers). **Broader than needed:** the plugin has one privilege that also covers its settings, service and authentication endpoints, which can change the configuration. The pusher only reads the status endpoint; grant it only if that trade-off is acceptable |
 
 Per-client traffic needs one of the two traffic privileges above. `Reporting: Traffic` works out of the box (it samples with iftop). `Diagnostics: Network Insight` gives exact byte totals but only has data once **Reporting > NetFlow** captures the LAN-side interfaces with *Capture local* enabled. Set `OPNSENSE_TRAFFIC_INTERFACES` to the logical names of those interfaces (`opt2,opt3,...`), not just `lan`.

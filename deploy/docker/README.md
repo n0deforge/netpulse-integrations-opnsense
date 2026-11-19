@@ -47,7 +47,10 @@ On the firewall:
 
 1. **System > Access > Users**: add a user, for example `netpulse`, with the
    privileges listed in [opnsense/README.md](../../opnsense/README.md#api-privileges).
-   The optional ones add DHCP leases, WAN details and WireGuard peers.
+   The optional ones add DHCP leases, WAN details, per-client traffic,
+   WireGuard and Tailscale peers. Two of them (`System: Gateways` for WAN
+   latency, `Tailscale` for tailnet peers) are broader than read-only;
+   the table says why, so you can decide.
 2. Open that user, **API keys > +**, and keep the downloaded key file.
 3. **Firewall > Rules**: allow the Docker host to reach *This Firewall* on the
    GUI port. The GUI may listen only on some interfaces

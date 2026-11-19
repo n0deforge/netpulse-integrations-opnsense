@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased (n0deforge fork)
+## opnsense/v0.1.0-n0de.3 (n0deforge fork)
 
-- Tailscale peers from the os-tailscale plugin, sent in the WireGuard section as interface `tailscale0` (name, Tailscale IPs, handshake, transfer, direct endpoint). Needs the plugin's `Tailscale` privilege, which is broader than read-only; documented in the privilege table.
+- Tailscale peers from the os-tailscale plugin, sent in the WireGuard section as interface `tailscale0`: MagicDNS name, Tailscale IPs, handshake, transfer, direct endpoint and control-plane presence (`online`). Needs the plugin's `Tailscale` privilege, which is broader than read-only; documented in the privilege table.
+- WAN latency and loss need `System: Gateways`, not `Status: Gateways`: OPNsense attaches `routes/gateway/status` only to the former. Documented, with the trade-off.
+- Validated on OPNsense 26.1.11: 7 tailnet peers (6 online, 1 offline), per-client traffic from `traffic/top` on five VLAN interfaces.
 
 ## opnsense/v0.1.0-n0de.2 (n0deforge fork)
 
-- WAN latency and loss from dpinger gateway status (`Status: Gateways`).
+- WAN latency and loss from dpinger gateway status (privilege: see n0de.3).
 - Assigned IPv4 subnets sent as networks (name, CIDR, VLAN tag) and the VLAN of every ARP MAC, from the interface it is learned on.
 - Documented the traffic privileges and the NetFlow prerequisite of Network Insight.
 
