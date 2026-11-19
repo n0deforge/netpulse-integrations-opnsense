@@ -345,12 +345,24 @@ func (p *Poller) Poll(ctx context.Context) (*probe.PayloadData, error) {
 	if ports := buildPorts(statistics, counters); len(ports) > 0 {
 		data.FDB = &probe.FDBData{Ports: ports}
 	}
-	if name := strings.TrimSpace(p.cfg.WANInterface); name != "" {
+	// Interface overview (best effort): WAN address/gateway, link state and
+	// speed per port, interface MACs. Also autodetects the WAN device when
+	// OPNSENSE_WAN_INTERFACE is not set.
+	detectedWAN := applyOverview(data, p.interfaceOverview(ctx))
+	name := strings.TrimSpace(p.cfg.WANInterface)
+	if name == "" {
+		name = detectedWAN
+	}
+	if name != "" {
 		if counters, ok := counters[name]; ok {
-			data.Wan = &probe.WanInfo{Device: name, Port: name}
+			if data.Wan == nil || data.Wan.Device != name {
+				data.Wan = &probe.WanInfo{Device: name, Port: name}
+			}
 			data.System.RxBps, data.System.TxBps = p.wanRates(counters)
 		}
 	}
+	data.DHCP = p.dhcpLeases(ctx)
+	data.WireGuard = p.wireguard(ctx)
 	data.Arp, data.ArpDevs, data.ArpStale = parseARP(arp)
 
 	// Vitals best effort: uptime y carga de system_time, memoria de

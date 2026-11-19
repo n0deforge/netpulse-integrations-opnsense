@@ -78,7 +78,9 @@ func TestPollReturnsDocumentedSystemCountersAndARP(t *testing.T) {
 		case "/api/diagnostics/traffic/top/lan":
 			serveFixture(t, w, "traffic_top.json")
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -325,7 +327,9 @@ func TestPollReadsCountersFromARealSystem(t *testing.T) {
 		case "/api/diagnostics/traffic/top/lan":
 			serveFixture(t, w, "traffic_top.json")
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -424,7 +428,9 @@ func TestPollKeepsGoingWithoutDashboardPrivilege(t *testing.T) {
 			"/api/diagnostics/cpu_usage/stream":
 			http.Error(w, "forbidden", http.StatusForbidden)
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -675,7 +681,9 @@ func TestClientTrafficIntegratesRatesIntoPerClientCounters(t *testing.T) {
 		case "/api/diagnostics/traffic/top/lan":
 			serveFixture(t, w, "traffic_top.json")
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -761,7 +769,9 @@ func TestClientTrafficDropsTheWindowAfterAFailedSample(t *testing.T) {
 		case "/api/diagnostics/cpu_usage/stream":
 			http.Error(w, "forbidden", http.StatusForbidden)
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -866,7 +876,9 @@ func TestInsightTrafficUsesExactTotals(t *testing.T) {
 			sawTop = true
 			serveFixture(t, w, "traffic_top.json")
 		default:
-			t.Errorf("unexpected request path %s", r.URL.Path)
+			if !optionalPath(r.URL.Path) {
+				t.Errorf("unexpected request path %s", r.URL.Path)
+			}
 			http.NotFound(w, r)
 		}
 	}))
@@ -921,4 +933,14 @@ func TestNewDefaultsTheTrafficInterface(t *testing.T) {
 	if got := New(Config{Host: "https://firewall.test", TrafficInterfaces: "lan,opt1"}).cfg.TrafficInterfaces; got != "lan,opt1" {
 		t.Fatalf("configured traffic interfaces = %q", got)
 	}
+}
+
+// optionalPath: endpoints of the best-effort extras (extras.go). The base
+// tests serve 404 for them, which must not fail or alter the base payload.
+func optionalPath(p string) bool {
+	switch p {
+	case keaLeasesPath, dnsmasqLeasesPath, iscLeasesPath, ifOverviewPath, wireguardShowPath:
+		return true
+	}
+	return false
 }
