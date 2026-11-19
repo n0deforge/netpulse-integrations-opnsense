@@ -133,12 +133,12 @@ func TestParseTailscale(t *testing.T) {
 		t.Fatalf("peers = %d", len(peers))
 	}
 	// sorted by node key: aaaa first
-	if p := peers[0]; p.Name != "phone" || p.LastHandshake != 0 || p.Endpoint != "" || p.AllowedIPs != "100.64.0.3/32" {
+	if p := peers[0]; p.Name != "phone" || p.LastHandshake != 0 || p.Endpoint != "" || p.AllowedIPs != "100.64.0.3/32" || p.Online == nil || *p.Online {
 		t.Fatalf("idle peer = %+v", p)
 	}
 	if p := peers[1]; p.Name != "laptop" || p.Interface != "tailscale0" || p.AllowedIPs != "100.64.0.2/32,fd7a:115c:a1e0::2/128" ||
 		p.LastHandshake != mustUnix(t, "2027-01-15T10:00:00Z") ||
-		p.RxBytes != 1048576 || p.Endpoint != "192.0.2.10:41641" {
+		p.RxBytes != 1048576 || p.Endpoint != "192.0.2.10:41641" || p.Online == nil || !*p.Online {
 		t.Fatalf("active peer = %+v", p)
 	}
 	if parseTailscale(tsStatus{BackendState: "Stopped"}) != nil || parseTailscale(tsStatus{Error: "not running"}) != nil {

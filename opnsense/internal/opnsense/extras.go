@@ -563,6 +563,7 @@ func parseTailscale(st tsStatus) []probe.WireGuardPeer {
 				}
 			}
 		}
+		online := tp.Online
 		var hs int64
 		if t, err := time.Parse(time.RFC3339Nano, tp.LastHandshake); err == nil && t.Year() > 1970 {
 			hs = t.Unix()
@@ -576,6 +577,7 @@ func parseTailscale(st tsStatus) []probe.WireGuardPeer {
 			LastHandshake: hs,
 			RxBytes:       tp.RxBytes,
 			TxBytes:       tp.TxBytes,
+			Online:        &online,
 		})
 	}
 	return peers
