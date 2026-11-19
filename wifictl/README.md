@@ -11,7 +11,7 @@ The controller is expected to expose `GET /api/state` with the shape below. It i
   "poll_interval": 30,
   "aps": [{
     "id": "t18", "name": "T18-21K Pro", "kind": "t18", "api": "ok", "polled_at": 1800000000,
-    "info": {"model": "T18-21K Pro", "firmware": "V1.0.34", "uptime_s": 1186046, "mac": "14:ea:a1:00:00:80"},
+    "info": {"model": "T18-21K Pro", "firmware": "V1.0.34", "uptime_s": 1186046, "mac": "14:ea:a1:00:00:80", "firmware_available": null},
     "radios": [{"id": "5g", "editable": true, "band": "5 GHz", "ssid": "home", "enabled": true, "channel": 149, "width": "40 MHz"}],
     "clients": [{"mac": "aa:bb:cc:00:00:01", "name": "phone", "ip": "10.0.20.5", "band": "5 GHz", "rssi": -61}],
     "ping": {"up": true, "rtt_ms": 0.5, "loss_pct": 0}
@@ -28,6 +28,7 @@ The controller is expected to expose `GET /api/state` with the shape below. It i
 | `system.bridgeMac`, `system.ifaceMacs` | `aps[].info.mac`, so NetPulse anchors the AP under the gateway |
 | `system.latencyMs`, `system.lossPct` | the controller's own ping to the AP |
 | `system.backhaul` | always `cable` |
+| `system.firmwareAvailable` | `aps[].info.firmware_available`: newer firmware found by the AP's own check (shown as "Firmware X available" in NetPulse) |
 | `wireless.radios` | one per band from the primary enabled SSID: channel, width, client count |
 | `wireless.clients` | `aps[].clients`: band and signal in dBm; link rate (`txRateMbps`/`rxRateMbps`) from the Asuswrt raw client list (`curTx`/`curRx`) |
 | `arp` | client IP as the AP reports it |
@@ -80,3 +81,16 @@ WIFICTL_LIVE_STATE=/path/to/state.json go test ./wifictl/... -run LiveFixture -v
 ```
 
 The second command translates a real controller dump without committing it and prints what each AP would push.
+
+## Firmware checks in the controller
+
+`firmware_available` comes from the APs' own update checks, read by the
+controller without starting a check or an upgrade:
+
+- **Asuswrt**: nvram `webs_state_flag` (1 = new firmware, 2 = new and
+  critical) and `webs_state_info` (the available build), filled by the
+  router's daily check.
+- **T18**: `get/system/onlineUpgradeCheck`, the result of the AP's last check
+  (`{status, currentVersion, latestVersion}`). Its web UI also has
+  `act/system/onlineUpgradeCheck` and `act/system/onlineUpgradeAction`; the
+  controller never calls them.

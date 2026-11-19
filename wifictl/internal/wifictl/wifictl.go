@@ -45,6 +45,9 @@ type AP struct {
 		UptimeS  *float64 `json:"uptime_s"`
 		MAC      *string  `json:"mac"`
 		Mode     *string  `json:"mode"`
+		// FirmwareAvailable: newer firmware found by the AP's own check, as
+		// the controller reports it; null/absent = up to date or unknown.
+		FirmwareAvailable *string `json:"firmware_available"`
 	} `json:"info"`
 	Radios  []APRadio  `json:"radios"`
 	Clients []APClient `json:"clients"`
@@ -213,6 +216,9 @@ func Translate(ap AP, pollInterval int, now time.Time) (*probe.PayloadData, erro
 		board.Release.Description = strings.TrimSpace(board.Model + " " + *ap.Info.Firmware)
 	}
 	sys := &probe.SystemData{Board: board, Backhaul: "cable"}
+	if ap.Info.FirmwareAvailable != nil {
+		sys.FirmwareAvailable = strings.TrimSpace(*ap.Info.FirmwareAvailable)
+	}
 	if ap.Info.UptimeS != nil {
 		sys.SysInfo = &probe.SysInfo{Uptime: *ap.Info.UptimeS}
 	}
