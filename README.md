@@ -1,23 +1,116 @@
 # netpulse-integrations
 
 > [!NOTE]
-> **n0deforge fork.** This repository follows
-> [gnacho/netpulse-integrations](https://github.com/gnacho/netpulse-integrations)
-> on `main` and carries its own work on the `opnsense` branch:
->
-> - **`opnsense/`** reads more of the firewall: DHCP leases (Kea, dnsmasq, ISC),
->   WAN details with latency and loss, VLANs and networks, device names from
->   the ARP table and WireGuard peers.
-> - **`wifictl/`** is new: it turns every access point managed by a self-hosted
->   Wi-Fi controller into a NetPulse unit with radios and clients.
-> - **[`deploy/docker`](deploy/docker)** runs NetPulse and both pushers with one
->   compose file, using the
->   [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) server
->   so WireGuard peers reach the dashboard.
->
-> Releases follow upstream's per-integration tags (`opnsense/v0.1.0-n0de.1`,
-> `wifictl/v0.1.0`) and also publish a pushers image to GHCR. Everything else
-> below is upstream's README.
+> **n0deforge fork** of [gnacho/netpulse-integrations](https://github.com/gnacho/netpulse-integrations).
+> The section below explains what it adds; everything after it is upstream's README.
+
+## This fork: NetPulse with an OPNsense gateway
+
+NetPulse is built around OpenWrt. It reads a router either by SSH, running
+OpenWrt commands, or through its own agent installed on the router. A network
+whose gateway is an **OPNsense firewall** and whose access points run **stock
+vendor firmware** fits neither model. Upstream ships a beta OPNsense pusher
+that covers the basics (system, interface counters, ARP), which leaves most of
+the dashboard empty on such a network: devices without names, no WAN details,
+no VLANs, no WireGuard and no access points at all.
+
+This fork, together with the server fork
+[netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense), fills
+those gaps through the external-integration model NetPulse already defines:
+vendor APIs are read here, and data reaches the server through the signed
+ingestion endpoint.
+
+```mermaid
+flowchart LR
+  OPN["OPNsense API<br/>system, ports, ARP, DHCP,<br/>WAN, gateways, WireGuard"] --> OP[opnsense-pusher]
+  WC["Wi-Fi controller<br/>GET /api/state"] --> WP[wifictl-pusher]
+  AP1[AP 1] -.-> WC
+  AP2[AP 2] -.-> WC
+  OP -- "signed push" --> NP["NetPulse<br/>(netpulse-opnsense)"]
+  WP -- "one unit per AP" --> NP
+```
+
+### What changes on an OPNsense network
+
+| Area | Upstream NetPulse | With this fork |
+|---|---|---|
+| Gateway health | CPU, memory, temperature, uptime, interface counters | Same, plus port names from the assigned interface and negotiated link speed |
+| Devices | IPv4 ARP table; most devices unnamed | ARP, DHCP leases from Kea, dnsmasq or ISC, and the hostname OPNsense resolves for each ARP entry; offline devices stay known through their leases |
+| WAN | Rates only when the interface is named by hand | WAN interface detected (PPPoE included), public IP, gateway, DNS, rates, and latency and loss from dpinger |
+| VLANs and networks | None | Every assigned subnet as a named network with its VLAN tag; every device tagged with its VLAN, Wi-Fi clients included (server fork) |
+| WireGuard | Not possible: the panel only reads OpenWrt over SSH | Peers, handshakes and transfer from the OPNsense API, with alerts and 30-day history (new payload section, server fork) |
+| Access points | Not supported unless they run OpenWrt or a supported vendor firmware | `wifictl-pusher`: each AP managed by a self-hosted controller becomes a unit with board, firmware, uptime, radios, clients, signal and ping |
+| Topology | One live map | Live, wired, Wi-Fi, per-VLAN and per-AP views (server fork) |
+| 24 h WAN total | About 24x too high on a fresh install | Fixed (server fork) |
+| Install | Binary and systemd | Also a Docker stack with env examples and a helper that creates units and tokens |
+
+### What was built
+
+- **`opnsense/`**, extended (all additions are best effort: a missing plugin or
+  privilege drops that section without failing the push):
+  - DHCP leases from all three DHCP servers OPNsense ships, merged by MAC
+  - interface overview: WAN autodetection, port labels and speeds, interface
+    MACs so the firewall is never drawn as a client
+  - device names from the ARP table hostname
+  - WAN latency and loss from gateway monitoring
+  - networks (name, subnet, VLAN tag) and the VLAN of every ARP entry
+  - WireGuard peers into the new `wireguard` payload section
+- **`wifictl/`**, new: reads a self-hosted Wi-Fi controller and pushes one
+  unit per access point. Built for a T18-21K Pro and an ASUS in AP mode,
+  neither of which NetPulse could read before.
+- **`deploy/docker/`**, new: NetPulse plus both pushers in one compose file,
+  env examples, a setup guide written from a real install (including the
+  OPNsense firewall rule and the GUI listen-interface catch) and
+  `register.sh`, which creates external units and agent tokens and prints
+  certificate fingerprints.
+- **Release plumbing**: `wifictl` is registered in `vendors.json` and the
+  release workflow like every upstream integration, CI builds both pushers,
+  and a workflow publishes the pushers image to GHCR.
+
+### Validation
+
+Run against a real network, not only fixtures: OPNsense 26.1.11 with PPPoE
+WAN, six VLANs, dnsmasq DHCP (42 leases) and a WireGuard client tunnel; a
+T18-21K Pro and an ASUS RT-AC68U in AP mode behind the controller. Every API
+response shape was checked against the parsers before release, and each
+addition has tests. Per-integration details are in
+[opnsense/README.md](opnsense/README.md) and [wifictl/README.md](wifictl/README.md).
+
+### Getting started
+
+Follow [deploy/docker](deploy/docker). In short:
+
+```sh
+cd deploy/docker
+cp netpulse.env.example netpulse.env          # set AUTH_PASS
+docker compose up -d netpulse
+./register.sh unit OPNsense 192.168.1.1 gateway
+cp opnsense.env.example opnsense.env           # API key, token, cert pin
+docker compose --profile opnsense up -d
+```
+
+### Releases and branches
+
+| | |
+|---|---|
+| `main` | Untouched mirror of upstream |
+| `opnsense` | Default branch: upstream plus this fork's commits |
+| `opnsense/vX.Y.Z-n0de.N` | OPNsense pusher releases (fork of an upstream integration) |
+| `wifictl/vX.Y.Z` | Wi-Fi controller pusher releases |
+| `ghcr.io/n0deforge/netpulse-integrations-opnsense` | Image with both pushers |
+
+Each release has amd64 and arm64 binaries with checksums and notes taken from
+the integration's CHANGELOG.
+
+### Relationship with upstream
+
+Integrations unchanged from upstream (RouterOS, Asuswrt, Bbox, FN, UniFi)
+should be reported and improved at
+[gnacho/netpulse-integrations](https://github.com/gnacho/netpulse-integrations).
+The OPNsense additions follow upstream's contribution rules (read-only,
+fixtures, honest absence of data) so they can be offered back.
+
+---
 
 External agents for router families that do not belong in the NetPulse core.
 
