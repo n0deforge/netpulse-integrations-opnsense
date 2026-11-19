@@ -48,7 +48,10 @@ type AP struct {
 	} `json:"info"`
 	Radios  []APRadio  `json:"radios"`
 	Clients []APClient `json:"clients"`
-	Ping    struct {
+	// Raw is the adapter's own response, redacted by the controller. Read
+	// only for fields the normalised client list leaves out (link rates).
+	Raw  json.RawMessage `json:"raw"`
+	Ping struct {
 		Up      *bool    `json:"up"`
 		RTTms   *float64 `json:"rtt_ms"`
 		LossPct *float64 `json:"loss_pct"`
@@ -228,6 +231,7 @@ func Translate(ap AP, pollInterval int, now time.Time) (*probe.PayloadData, erro
 		sys.LossPct = &v
 	}
 
+	rates := linkRates(ap)
 	clients := map[string]probe.WirelessClient{}
 	perBand := map[string]int{}
 	arp := map[string]string{}
@@ -241,6 +245,9 @@ func Translate(ap AP, pollInterval int, now time.Time) (*probe.PayloadData, erro
 		wc := probe.WirelessClient{Band: band}
 		if s, ok := toInt(c.RSSI); ok && s < 0 {
 			wc.SignalDbm = s
+		}
+		if r, ok := rates[mac]; ok {
+			wc.TxRateMbps, wc.RxRateMbps = r[0], r[1]
 		}
 		clients[mac] = wc
 		perBand[band]++
@@ -325,4 +332,54 @@ func toInt(v any) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// linkRates reads the negotiated link rate of each client from the raw
+// adapter data, keyed by canonical MAC: [AP->client, client->AP] in Mbps.
+// Only the Asuswrt client list carries them (curTx/curRx, PHY rates); the
+// T18 station list reports instantaneous throughput instead, which is not a
+// link rate and is left out.
+func linkRates(ap AP) map[string][2]float64 {
+	out := map[string][2]float64{}
+	if ap.Kind != "asus" || len(ap.Raw) == 0 {
+		return out
+	}
+	var raw struct {
+		Clients struct {
+			List map[string]json.RawMessage `json:"get_clientlist"`
+		} `json:"clients"`
+	}
+	if json.Unmarshal(ap.Raw, &raw) != nil {
+		return out
+	}
+	for key, msg := range raw.Clients.List {
+		mac := canonMAC(key)
+		if mac == "" {
+			continue // "maclist" and other non-client keys
+		}
+		var c struct {
+			CurTx any `json:"curTx"`
+			CurRx any `json:"curRx"`
+		}
+		if json.Unmarshal(msg, &c) != nil {
+			continue
+		}
+		tx, rx := toFloat(c.CurTx), toFloat(c.CurRx)
+		if tx > 0 || rx > 0 {
+			out[mac] = [2]float64{tx, rx}
+		}
+	}
+	return out
+}
+
+func toFloat(v any) float64 {
+	switch x := v.(type) {
+	case float64:
+		return x
+	case string:
+		if f, err := strconv.ParseFloat(strings.TrimSpace(x), 64); err == nil && f > 0 {
+			return f
+		}
+	}
+	return 0
 }

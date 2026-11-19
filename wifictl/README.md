@@ -29,7 +29,7 @@ The controller is expected to expose `GET /api/state` with the shape below. It i
 | `system.latencyMs`, `system.lossPct` | the controller's own ping to the AP |
 | `system.backhaul` | always `cable` |
 | `wireless.radios` | one per band from the primary enabled SSID: channel, width, client count |
-| `wireless.clients` | `aps[].clients`: band and signal in dBm |
+| `wireless.clients` | `aps[].clients`: band and signal in dBm; link rate (`txRateMbps`/`rxRateMbps`) from the Asuswrt raw client list (`curTx`/`curRx`) |
 | `arp` | client IP as the AP reports it |
 | `dhcp.reservations` | client name as the AP reports it (ASUS nicknames, T18 station names) |
 
@@ -39,6 +39,7 @@ The controller is polled once per cycle and the result is shared by every AP uni
 
 - An AP the controller cannot read (`api` other than `ok`) or whose `polled_at` is older than four controller poll intervals fails the collection. NetPulse then marks the unit stale instead of showing frozen clients.
 - Signal is sent as `0` when the AP does not report RSSI (the T18 firmware does not). NetPulse treats values `>= 0` as unknown.
+- Link rates come only from Asuswrt (`curTx`/`curRx`, PHY rates in Mbps). The T18 station list reports instantaneous throughput (`downSpeed`/`upSpeed`), which is not a link rate and is not sent.
 - Only the primary SSID of each band is described as a radio. Disabled and secondary SSIDs are skipped.
 - No neighbour scan, noise floor, BSSIDs, transmit power or 802.11r state: the controller does not expose them, so the channel analyzer and roaming-daemon views stay empty. Roaming between APs is still recorded by NetPulse from the client moving between units.
 - Read-only. The controller can change SSIDs, channels and reboot APs; this pusher only calls `POST /api/login` and `GET /api/state`.

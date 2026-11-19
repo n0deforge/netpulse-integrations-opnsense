@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Wi-Fi link rate per client from the Asuswrt raw client list (`curTx`/`curRx`) as `txRateMbps`/`rxRateMbps`; needs netpulse-opnsense with the field. Validated: 12 of 12 ASUS clients.
+
 ## wifictl/v0.1.0
 
 - First release. Reads `GET /api/state` of a self-hosted Wi-Fi controller and pushes each managed AP as its own external unit.

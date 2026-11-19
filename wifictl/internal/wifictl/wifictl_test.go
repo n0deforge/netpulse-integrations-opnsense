@@ -19,6 +19,12 @@ const sample = `{"generated":1800000000,"poll_interval":30,"aps":[
   "clients":[{"mac":"aa:bb:cc:00:00:01","name":"phone","ip":"10.0.20.5","band":"5 GHz","rssi":null},
              {"mac":"aa:bb:cc:00:00:02","name":null,"ip":null,"band":"2.4 GHz","rssi":"-61"}],
   "ping":{"up":true,"rtt_ms":0.5,"loss_pct":0}},
+ {"id":"asus2","name":"ASUS2","kind":"asus","api":"ok","error":null,"polled_at":1800000000,
+  "info":{"model":"RT-AC68U","mac":"04:d4:c4:00:00:a0"},
+  "radios":[{"id":"5g","editable":true,"band":"5 GHz","ssid":"B","enabled":true,"channel":149,"width":"Auto"}],
+  "clients":[{"mac":"aa:bb:cc:00:00:09","name":"tv","ip":"10.0.10.9","band":"5 GHz","rssi":"-55"}],
+  "raw":{"clients":{"get_clientlist":{"maclist":["AA:BB:CC:00:00:09"],"AA:BB:CC:00:00:09":{"curTx":"144.4","curRx":"130","isWL":"2"}}}},
+  "ping":{}},
  {"id":"asus","name":"ASUS","kind":"asus","api":"auth_error","error":"login rejected","polled_at":1800000000,
   "info":{},"radios":[],"clients":[],"ping":{}}]}`
 
@@ -45,7 +51,17 @@ func TestTranslate(t *testing.T) {
 	if d.Arp["AA:BB:CC:00:00:01"] != "10.0.20.5" || len(d.DHCP.Reservations) != 1 {
 		t.Fatalf("arp/names = %v %+v", d.Arp, d.DHCP)
 	}
-	if _, err := Translate(st.APs[1], 30, now); err == nil {
+	a2, err := Translate(st.APs[1], 30, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c := a2.Wireless.Clients["AA:BB:CC:00:00:09"]; c.TxRateMbps != 144.4 || c.RxRateMbps != 130 {
+		t.Fatalf("asus link rate = %+v", c)
+	}
+	if c := d.Wireless.Clients["AA:BB:CC:00:00:01"]; c.TxRateMbps != 0 {
+		t.Fatalf("t18 must not report a link rate: %+v", c)
+	}
+	if _, err := Translate(st.APs[2], 30, now); err == nil {
 		t.Fatal("auth_error AP must fail collection")
 	}
 	if _, err := Translate(st.APs[0], 30, now.Add(10*time.Minute)); err == nil {
@@ -79,7 +95,7 @@ func TestClientLogsInOn401(t *testing.T) {
 	defer srv.Close()
 	c := New(srv.URL, "pw", time.Minute)
 	st, err := c.State(context.Background())
-	if err != nil || !logged || len(st.APs) != 2 {
+	if err != nil || !logged || len(st.APs) != 3 {
 		t.Fatalf("state=%v err=%v logged=%v", st, err, logged)
 	}
 }
