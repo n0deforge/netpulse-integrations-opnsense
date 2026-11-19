@@ -3,7 +3,9 @@
     {
       "id": "asuswrt",
       "mode": "ssh",
-      "arches": ["arm64"],
+      "arches": [
+        "arm64"
+      ],
       "tagPrefix": "asuswrt/v",
       "binary": "asuswrt-pusher",
       "target": "asuswrt/cmd/asuswrt-pusher",
@@ -12,7 +14,10 @@
     {
       "id": "bbox",
       "mode": "local",
-      "arches": ["amd64", "arm64"],
+      "arches": [
+        "amd64",
+        "arm64"
+      ],
       "tagPrefix": "bbox/v",
       "binary": "netpulse-integrations",
       "target": "cmd/integrations-supervisor",
@@ -21,7 +26,10 @@
     {
       "id": "fn",
       "mode": "local",
-      "arches": ["amd64", "arm64"],
+      "arches": [
+        "amd64",
+        "arm64"
+      ],
       "tagPrefix": "fn/v",
       "binary": "fn-pusher",
       "target": "fn/cmd/fn-pusher",
@@ -30,7 +38,10 @@
     {
       "id": "opnsense",
       "mode": "local",
-      "arches": ["amd64", "arm64"],
+      "arches": [
+        "amd64",
+        "arm64"
+      ],
       "tagPrefix": "opnsense/v",
       "binary": "opnsense-pusher",
       "target": "opnsense/cmd/opnsense-pusher",
@@ -39,7 +50,9 @@
     {
       "id": "routeros",
       "mode": "local",
-      "arches": ["amd64"],
+      "arches": [
+        "amd64"
+      ],
       "tagPrefix": "routeros/v",
       "binary": "routeros-pusher",
       "target": "routeros/cmd/routeros-pusher",
@@ -48,11 +61,25 @@
     {
       "id": "unifi",
       "mode": "local",
-      "arches": ["amd64"],
+      "arches": [
+        "amd64"
+      ],
       "tagPrefix": "unifi/v",
       "binary": "unifi-pusher",
       "target": "unifi/cmd/unifi-pusher",
       "description": "Read-only UniFi controller pusher covering gateways, switches and APs of one site"
+    },
+    {
+      "id": "wifictl",
+      "mode": "local",
+      "arches": [
+        "amd64",
+        "arm64"
+      ],
+      "tagPrefix": "wifictl/v",
+      "binary": "wifictl-pusher",
+      "target": "wifictl/cmd/wifictl-pusher",
+      "description": "Read-only pusher for a self-hosted Wi-Fi controller API: one NetPulse unit per managed AP with radios and associated clients"
     }
   ]
 }

@@ -40,3 +40,5 @@ jobs:
           GOARCH=amd64 go build -trimpath -o /tmp/routeros-pusher ./routeros/cmd/routeros-pusher
           GOARCH=arm64 go build -trimpath -o /tmp/asuswrt-pusher ./asuswrt/cmd/asuswrt-pusher
           GOARCH=amd64 go build -trimpath -o /tmp/unifi-pusher ./unifi/cmd/unifi-pusher
+          GOARCH=amd64 go build -trimpath -o /tmp/opnsense-pusher ./opnsense/cmd/opnsense-pusher
+          GOARCH=arm64 go build -trimpath -o /tmp/wifictl-pusher ./wifictl/cmd/wifictl-pusher

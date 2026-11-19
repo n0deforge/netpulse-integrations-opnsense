@@ -9,6 +9,7 @@ on:
       - 'fn/v*'
       - 'opnsense/v*'
       - 'unifi/v*'
+      - 'wifictl/v*'
 
 permissions:
   contents: write
@@ -82,6 +83,13 @@ jobs:
               target=./unifi/cmd/unifi-pusher
               ldvar=main.Version
               arches=amd64
+              ;;
+            wifictl/v*)
+              name=wifictl
+              binary=wifictl-pusher
+              target=./wifictl/cmd/wifictl-pusher
+              ldvar=main.Version
+              arches="amd64 arm64"
               ;;
             *)
               echo "Unsupported tag: $TAG" >&2
