@@ -1,5 +1,9 @@
 # Changelog
 
+## opnsense/v0.1.0-n0de.4 (n0deforge fork)
+
+- Tailscale peers carry the OS they report (`os`), so the tunnel map shows a laptop, phone or server icon. Validated: macOS, linux and iOS peers on a 7-device tailnet.
+
 ## opnsense/v0.1.0-n0de.3 (n0deforge fork)
 
 - Tailscale peers from the os-tailscale plugin, sent in the WireGuard section as interface `tailscale0`: MagicDNS name, Tailscale IPs, handshake, transfer, direct endpoint and control-plane presence (`online`). Needs the plugin's `Tailscale` privilege, which is broader than read-only; documented in the privilege table.
