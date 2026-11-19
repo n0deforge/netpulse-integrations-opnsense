@@ -510,6 +510,7 @@ type tsPeer struct {
 	RxBytes       int64    `json:"RxBytes"`
 	TxBytes       int64    `json:"TxBytes"`
 	CurAddr       string   `json:"CurAddr"`
+	OS            string   `json:"OS"`
 }
 
 type tsStatus struct {
@@ -578,6 +579,7 @@ func parseTailscale(st tsStatus) []probe.WireGuardPeer {
 			RxBytes:       tp.RxBytes,
 			TxBytes:       tp.TxBytes,
 			Online:        &online,
+			OS:            tp.OS,
 		})
 	}
 	return peers

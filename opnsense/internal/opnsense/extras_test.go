@@ -122,7 +122,7 @@ func TestParseTailscale(t *testing.T) {
 	 "Self":{"PublicKey":"nodekey:self","HostName":"fw","DNSName":"fw.example-tailnet.ts.net.","TailscaleIPs":["100.64.0.1"],"Online":true},
 	 "Peer":{
 	  "nodekey:bbbb":{"PublicKey":"nodekey:bbbb","HostName":"Laptop","DNSName":"laptop.example-tailnet.ts.net.",
-	   "TailscaleIPs":["100.64.0.2","fd7a:115c:a1e0::2"],"Online":true,"LastHandshake":"2027-01-15T10:00:00.123Z",
+	   "TailscaleIPs":["100.64.0.2","fd7a:115c:a1e0::2"],"Online":true,"OS":"macOS","LastHandshake":"2027-01-15T10:00:00.123Z",
 	   "RxBytes":1048576,"TxBytes":2048,"CurAddr":"192.0.2.10:41641","Relay":"nyc"},
 	  "nodekey:aaaa":{"PublicKey":"nodekey:aaaa","HostName":"phone","DNSName":"",
 	   "TailscaleIPs":["100.64.0.3"],"Online":false,"LastHandshake":"0001-01-01T00:00:00Z","RxBytes":0,"TxBytes":0,"CurAddr":"","Relay":"nyc"}}}`), &st); err != nil {
@@ -138,7 +138,7 @@ func TestParseTailscale(t *testing.T) {
 	}
 	if p := peers[1]; p.Name != "laptop" || p.Interface != "tailscale0" || p.AllowedIPs != "100.64.0.2/32,fd7a:115c:a1e0::2/128" ||
 		p.LastHandshake != mustUnix(t, "2027-01-15T10:00:00Z") ||
-		p.RxBytes != 1048576 || p.Endpoint != "192.0.2.10:41641" || p.Online == nil || !*p.Online {
+		p.RxBytes != 1048576 || p.Endpoint != "192.0.2.10:41641" || p.Online == nil || !*p.Online || p.OS != "macOS" {
 		t.Fatalf("active peer = %+v", p)
 	}
 	if parseTailscale(tsStatus{BackendState: "Stopped"}) != nil || parseTailscale(tsStatus{Error: "not running"}) != nil {

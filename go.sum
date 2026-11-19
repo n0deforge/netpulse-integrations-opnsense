@@ -1,5 +1,5 @@
-github.com/n0deforge/netpulse-opnsense/agent v1.5.7-0.20261119194905-28d4713c6cd7 h1:6QVs1f2R0V6n4JsLbBYqRuBL4dmgwb63+RDVEYQVV+o=
-github.com/n0deforge/netpulse-opnsense/agent v1.5.7-0.20261119194905-28d4713c6cd7/go.mod h1:YmKpteSQJ2QL60IFOTxH2rZQA4i/1YUCZw8irRmeTZ8=
+github.com/n0deforge/netpulse-opnsense/agent v1.5.7-0.20261119201921-4952a54d8a3b h1:Wg3mVRQNOkycv8bZ2HhUAWe5wHg/j58BUK+Yv63gJMc=
+github.com/n0deforge/netpulse-opnsense/agent v1.5.7-0.20261119201921-4952a54d8a3b/go.mod h1:YmKpteSQJ2QL60IFOTxH2rZQA4i/1YUCZw8irRmeTZ8=
 golang.org/x/crypto v0.58.0 h1:COkYLr4k7nDI4r6QtMML2AfzeIswWHAJthLS6K/M/54=
 golang.org/x/crypto v0.58.0/go.mod h1:Xh+kl5A+M0gMiWDytH2Hhr5Z7WbNCpv/eB/EFgfSk+w=
 golang.org/x/net v0.62.0 h1:18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY=
