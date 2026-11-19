@@ -14,4 +14,4 @@ require (
 	golang.org/x/text v0.43.0 // indirect
 )
 
-replace github.com/gnacho/netpulse/agent => ../src/agent
+replace github.com/gnacho/netpulse/agent => github.com/n0deforge/netpulse-opnsense/agent v1.5.7-0.20261119175530-ce741b36ca88
