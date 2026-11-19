@@ -351,3 +351,23 @@ func parseWireGuard(rows []map[string]any) *probe.WireGuardData {
 	sort.Strings(wg.Interfaces)
 	return wg
 }
+
+// arpHostnames: OPNsense resolves each ARP entry (Unbound/DHCP registered
+// names) and returns it as "hostname". It travels as discovery.hostByIp, the
+// neutral IP -> name map the server already uses for devices without a DHCP
+// hostname, so names show up even when the DHCP lease privilege is missing.
+func arpHostnames(raw arpResponse) map[string]string {
+	out := map[string]string{}
+	for _, row := range raw.Rows {
+		host := strings.TrimSuffix(strings.TrimSpace(row.Hostname), ".")
+		ip := net.ParseIP(strings.TrimSpace(row.IP))
+		if host == "" || host == "?" || ip == nil || ip.To4() == nil {
+			continue
+		}
+		if net.ParseIP(host) != nil {
+			continue // unresolved: OPNsense echoes the address
+		}
+		out[ip.To4().String()] = host
+	}
+	return out
+}

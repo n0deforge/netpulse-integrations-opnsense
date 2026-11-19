@@ -198,10 +198,11 @@ type interfaceStatistics struct {
 
 type arpResponse struct {
 	Rows []struct {
-		MAC     string `json:"mac"`
-		IP      string `json:"ip"`
-		Intf    string `json:"intf"`
-		Expired bool   `json:"expired"`
+		MAC      string `json:"mac"`
+		IP       string `json:"ip"`
+		Intf     string `json:"intf"`
+		Expired  bool   `json:"expired"`
+		Hostname string `json:"hostname"`
 	} `json:"rows"`
 }
 
@@ -364,6 +365,9 @@ func (p *Poller) Poll(ctx context.Context) (*probe.PayloadData, error) {
 	data.DHCP = p.dhcpLeases(ctx)
 	data.WireGuard = p.wireguard(ctx)
 	data.Arp, data.ArpDevs, data.ArpStale = parseARP(arp)
+	if hosts := arpHostnames(arp); len(hosts) > 0 {
+		data.Discovery = &probe.DiscoveryData{HostByIP: hosts}
+	}
 
 	// Vitals best effort: uptime y carga de system_time, memoria de
 	// system_resources, el sensor más caliente de system_temperature y la CPU

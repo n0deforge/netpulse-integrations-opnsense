@@ -64,3 +64,18 @@ func TestOverviewAndMediaSpeed(t *testing.T) {
 		t.Fatal("mediaSpeed")
 	}
 }
+
+func TestARPHostnames(t *testing.T) {
+	var raw arpResponse
+	if err := json.Unmarshal([]byte(`{"rows":[
+	 {"mac":"aa:bb:cc:00:00:01","ip":"10.0.30.5","intf":"vlan0.30","hostname":"nas.home.arpa."},
+	 {"mac":"aa:bb:cc:00:00:02","ip":"10.0.30.6","intf":"vlan0.30","hostname":""},
+	 {"mac":"aa:bb:cc:00:00:03","ip":"10.0.30.7","intf":"vlan0.30","hostname":"10.0.30.7"},
+	 {"mac":"aa:bb:cc:00:00:04","ip":"10.0.30.8","intf":"vlan0.30","hostname":"?"}]}`), &raw); err != nil {
+		t.Fatal(err)
+	}
+	h := arpHostnames(raw)
+	if len(h) != 1 || h["10.0.30.5"] != "nas.home.arpa" {
+		t.Fatalf("hosts = %v", h)
+	}
+}
