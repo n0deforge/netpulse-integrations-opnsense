@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## wifictl/v0.2.0
 
 - Firmware updates found by the APs' own checks, sent as `system.firmwareAvailable`. Validated: the ASUS reported 3.0.0.4.386_52102 over the installed 52062; the T18 reported up to date.
 - Wi-Fi link rate per client from the Asuswrt raw client list (`curTx`/`curRx`) as `txRateMbps`/`rxRateMbps`; needs netpulse-opnsense with the field. Validated: 12 of 12 ASUS clients.

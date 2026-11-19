@@ -39,7 +39,7 @@ flowchart LR
 | WAN | Rates only when the interface is named by hand | WAN interface detected (PPPoE included), public IP, gateway, DNS, rates, and latency and loss from dpinger |
 | VLANs and networks | None | Every assigned subnet as a named network with its VLAN tag; every device tagged with its VLAN, Wi-Fi clients included (server fork) |
 | WireGuard and Tailscale | Not possible: the panel only reads OpenWrt over SSH | WireGuard peers and Tailscale tailnet devices (as `tailscale0`), with handshakes and transfer from the OPNsense API, alerts and 30-day history (new payload section, server fork) |
-| Access points | Not supported unless they run OpenWrt or a supported vendor firmware | `wifictl-pusher`: each AP managed by a self-hosted controller becomes a unit with board, firmware, uptime, radios, clients, signal and ping |
+| Access points | Not supported unless they run OpenWrt or a supported vendor firmware | `wifictl-pusher`: each AP managed by a self-hosted controller becomes a unit with board, firmware (and available updates), uptime, radios, clients with signal and link rate, and ping |
 | Topology | One live map | Live, wired, Wi-Fi, per-VLAN, per-AP and per-tunnel views, with a dedicated map for each WireGuard interface and the Tailscale tailnet (server fork) |
 | 24 h WAN total | About 24x too high on a fresh install | Fixed (server fork) |
 | Install | Binary and systemd | Also a Docker stack with env examples and a helper that creates units and tokens |
