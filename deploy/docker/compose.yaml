@@ -1,0 +1,57 @@
+# NetPulse with the OPNsense and Wi-Fi controller pushers.
+# Setup steps: README.md in this directory.
+#
+#   docker compose up -d netpulse
+#   ./register.sh ...                       # create units and tokens
+#   docker compose --profile opnsense --profile wifictl up -d
+
+services:
+  netpulse:
+    image: ${NETPULSE_IMAGE:-ghcr.io/n0deforge/netpulse-opnsense:latest}
+    container_name: netpulse
+    ports:
+      # Loopback by default, as upstream. NETPULSE_PUBLISH_ADDR=0.0.0.0 for the LAN.
+      - "${NETPULSE_PUBLISH_ADDR:-127.0.0.1}:${NETPULSE_PORT:-3000}:3000"
+    volumes:
+      - netpulse-data:/data
+    env_file: netpulse.env
+    environment:
+      PORT: 3000
+      DATA_DIR: /data
+    restart: unless-stopped
+
+  opnsense-pusher:
+    image: ${PUSHERS_IMAGE:-ghcr.io/n0deforge/netpulse-integrations-opnsense:latest}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    container_name: netpulse-opnsense-pusher
+    command: ["opnsense-pusher"]
+    env_file: opnsense.env
+    depends_on: [netpulse]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    profiles: ["opnsense"]
+
+  wifictl-pusher:
+    image: ${PUSHERS_IMAGE:-ghcr.io/n0deforge/netpulse-integrations-opnsense:latest}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    container_name: netpulse-wifictl-pusher
+    command: ["wifictl-pusher"]
+    env_file: wifictl.env
+    # Reach a controller published on the Docker host as host.docker.internal.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on: [netpulse]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    profiles: ["wifictl"]
+
+volumes:
+  netpulse-data:

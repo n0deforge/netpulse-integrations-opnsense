@@ -1,0 +1,56 @@
+name: fork-image
+
+# Pushers image for deploy/docker (n0deforge fork). Runs next to release.yml:
+# an opnsense/v* or wifictl/v* tag publishes release binaries there and the
+# image here, ghcr.io/<owner>/<repo>:latest plus a tag per release.
+
+on:
+  push:
+    tags: ['opnsense/v*', 'wifictl/v*']
+  workflow_dispatch:
+
+concurrency:
+  group: fork-image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Resolve image and tags
+        id: meta
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          IMAGE="ghcr.io/$(echo "$REPO" | tr '[:upper:]' '[:lower:]')"
+          if [ "${{ github.ref_type }}" = 'tag' ]; then
+            REL=$(echo "$GITHUB_REF_NAME" | tr '/' '-')   # opnsense-v0.1.0-n0de.1
+            echo "version=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            printf 'tags<<EOF\n%s:%s\n%s:latest\nEOF\n' "$IMAGE" "$REL" "$IMAGE" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=edge-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            echo "tags=$IMAGE:edge" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
