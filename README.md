@@ -6,8 +6,8 @@
 > on `main` and carries its own work on the `opnsense` branch:
 >
 > - **`opnsense/`** reads more of the firewall: DHCP leases (Kea, dnsmasq, ISC),
->   WAN and interface details, device names from the ARP table and WireGuard
->   peers.
+>   WAN details with latency and loss, VLANs and networks, device names from
+>   the ARP table and WireGuard peers.
 > - **`wifictl/`** is new: it turns every access point managed by a self-hosted
 >   Wi-Fi controller into a NetPulse unit with radios and clients.
 > - **[`deploy/docker`](deploy/docker)** runs NetPulse and both pushers with one
