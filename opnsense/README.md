@@ -28,6 +28,8 @@ All best effort: a missing plugin or privilege (403/404) drops that section and 
 - *fork* DHCP leases from Kea (`kea/leases4/search`), dnsmasq (`dnsmasq/leases/search`) and ISC (`dhcpv4/leases/searchLease`), merged by MAC. Expired leases are dropped; reservations without an expiry are kept.
 - *fork* Interface overview (`interfaces/overview/interfacesInfo`): the `wan` interface gives the WAN device, IPv4, gateway and DNS, and is used for WAN rates when `OPNSENSE_WAN_INTERFACE` is empty. Ports get the assigned interface description as label and the negotiated speed from the media string. The `lan` MAC becomes the bridge MAC and every interface MAC is announced, so the firewall is never drawn as a client.
 - *fork* Device names from the hostname OPNsense resolves for each ARP entry, sent as `discovery.hostByIp`. Names appear even without a DHCP lease privilege.
+- *fork* WAN latency and loss from dpinger (`routes/gateway/status`): the gateway whose address is the WAN gateway, else one named WAN. Feeds the WAN card and the health score.
+- *fork* Every assigned IPv4 subnet (VLANs, LAN, MGMT) as a NetPulse network with its name, CIDR and VLAN tag, and the VLAN each ARP MAC is seen on (`vlan0.10` gives 10). NetPulse uses them for device VLANs, per-network client lists and the per-VLAN topology view.
 - *fork* WireGuard peers from `wireguard/service/show`: interface, peer name, endpoint, allowed IPs, last handshake and cumulative transfer, sent in the `wireguard` payload section. The NetPulse server needs [netpulse-opnsense](https://github.com/n0deforge/netpulse-opnsense) to read it; an upstream server ignores the field.
 
 ## Deliberate omissions and unresolved behavior
@@ -56,6 +58,9 @@ no more:
 | `Services: Kea DHCP` | `kea/leases4/search` (*fork*, optional, DHCP leases on Kea) |
 | `Status: DHCP leases` | `dhcpv4/leases/searchLease` (*fork*, optional, legacy ISC DHCP) |
 | `VPN: WireGuard` | `wireguard/service/show` (*fork*, optional, WireGuard peers) |
+| `Status: Gateways` | `routes/gateway/status` (*fork*, optional, WAN latency and loss) |
+
+Per-client traffic needs one of the two traffic privileges above. `Reporting: Traffic` works out of the box (it samples with iftop). `Diagnostics: Network Insight` gives exact byte totals but only has data once **Reporting > NetFlow** captures the LAN-side interfaces with *Capture local* enabled. Set `OPNSENSE_TRAFFIC_INTERFACES` to the logical names of those interfaces (`opt2,opt3,...`), not just `lan`.
 
 `System: Firmware` is not needed, even though `core/firmware/status` answers 403
 without it. Every request the pusher makes lives in the `diagnostics` module. The

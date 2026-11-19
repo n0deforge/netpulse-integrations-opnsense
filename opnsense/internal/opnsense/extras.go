@@ -371,3 +371,123 @@ func arpHostnames(raw arpResponse) map[string]string {
 	}
 	return out
 }
+
+// ---- gateway quality, networks and VLANs ----------------------------------
+
+const gatewayStatusPath = "/api/routes/gateway/status"
+
+type gatewayStatusResponse struct {
+	Items []map[string]any `json:"items"`
+}
+
+// gatewayQuality reads dpinger's view of the WAN gateway: delay ("12.3 ms")
+// and loss ("0.0 %"). The gateway whose address is the WAN gateway wins, then
+// one whose name mentions WAN, then the first monitored one.
+func (p *Poller) gatewayQuality(ctx context.Context, wanGateway string) (latency, loss *float64) {
+	var resp gatewayStatusResponse
+	if err := p.get(ctx, gatewayStatusPath, &resp); err != nil {
+		return nil, nil
+	}
+	return pickGatewayQuality(resp.Items, wanGateway)
+}
+
+func pickGatewayQuality(items []map[string]any, wanGateway string) (latency, loss *float64) {
+	var best map[string]any
+	score := -1
+	for _, it := range items {
+		s := 0
+		if d := str(it, "delay"); d == "" || d == "~" {
+			continue // not monitored
+		}
+		if wanGateway != "" && str(it, "address", "gateway") == wanGateway {
+			s += 4
+		}
+		if strings.Contains(strings.ToUpper(str(it, "name")), "WAN") {
+			s += 2
+		}
+		if strings.EqualFold(str(it, "status_translated"), "online") {
+			s++
+		}
+		if s > score {
+			best, score = it, s
+		}
+	}
+	if best == nil {
+		return nil, nil
+	}
+	if v, ok := leadingFloat(str(best, "delay")); ok {
+		latency = &v
+	}
+	if v, ok := leadingFloat(str(best, "loss")); ok {
+		loss = &v
+	}
+	return latency, loss
+}
+
+// leadingFloat parses "12.3 ms", "0.0 %" or "12.3".
+func leadingFloat(s string) (float64, bool) {
+	s = strings.TrimSpace(s)
+	end := 0
+	for end < len(s) && (s[end] >= '0' && s[end] <= '9' || s[end] == '.') {
+		end++
+	}
+	if end == 0 {
+		return 0, false
+	}
+	v, err := strconv.ParseFloat(s[:end], 64)
+	return v, err == nil
+}
+
+// vlanOf returns the 802.1Q tag of a FreeBSD VLAN interface ("vlan0.10",
+// "igc1_vlan10", "vlan10"), or 0.
+func vlanOf(dev string) int {
+	d := strings.ToLower(strings.TrimSpace(dev))
+	for _, sep := range []string{".", "_vlan", "vlan"} {
+		if i := strings.LastIndex(d, sep); i >= 0 {
+			if n, err := strconv.Atoi(d[i+len(sep):]); err == nil && n > 0 && n < 4095 {
+				return n
+			}
+		}
+	}
+	return 0
+}
+
+// overviewNetworks describes every assigned IPv4 subnet (VLANs, LAN, MGMT)
+// as a NetPulse network: name from the interface description, CIDR from the
+// interface address and the VLAN tag from the device. WAN, loopback and /32
+// tunnels are left out.
+func overviewNetworks(ov []ifOverview) []probe.UciNetwork {
+	var out []probe.UciNetwork
+	for _, o := range ov {
+		if o.Identifier == "" || o.Identifier == "wan" || o.Identifier == "lo0" {
+			continue
+		}
+		_, ipnet, err := net.ParseCIDR(o.Addr4)
+		if err != nil || ipnet.IP.To4() == nil {
+			continue
+		}
+		if ones, _ := ipnet.Mask.Size(); ones >= 31 {
+			continue
+		}
+		name := o.Description
+		if name == "" {
+			name = o.Identifier
+		}
+		out = append(out, probe.UciNetwork{
+			Name: name, Device: o.Device, Proto: "static", Subnet: ipnet.String(), Vlan: vlanOf(o.Device),
+		})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out
+}
+
+// arpVLANs maps each ARP MAC to the VLAN of the interface it was learned on.
+func arpVLANs(arpDevs map[string]string) map[string]int {
+	out := map[string]int{}
+	for mac, dev := range arpDevs {
+		if v := vlanOf(dev); v > 0 {
+			out[mac] = v
+		}
+	}
+	return out
+}

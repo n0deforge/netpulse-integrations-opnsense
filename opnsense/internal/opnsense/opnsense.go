@@ -349,7 +349,11 @@ func (p *Poller) Poll(ctx context.Context) (*probe.PayloadData, error) {
 	// Interface overview (best effort): WAN address/gateway, link state and
 	// speed per port, interface MACs. Also autodetects the WAN device when
 	// OPNSENSE_WAN_INTERFACE is not set.
-	detectedWAN := applyOverview(data, p.interfaceOverview(ctx))
+	overview := p.interfaceOverview(ctx)
+	detectedWAN := applyOverview(data, overview)
+	if nets := overviewNetworks(overview); len(nets) > 0 {
+		data.Networks = nets
+	}
 	name := strings.TrimSpace(p.cfg.WANInterface)
 	if name == "" {
 		name = detectedWAN
@@ -365,6 +369,16 @@ func (p *Poller) Poll(ctx context.Context) (*probe.PayloadData, error) {
 	data.DHCP = p.dhcpLeases(ctx)
 	data.WireGuard = p.wireguard(ctx)
 	data.Arp, data.ArpDevs, data.ArpStale = parseARP(arp)
+	if vlans := arpVLANs(data.ArpDevs); len(vlans) > 0 && data.FDB != nil {
+		// VLAN on which the firewall sees each routed MAC. The server uses it
+		// for the device VLAN and to attribute clients to the networks above.
+		data.FDB.VLANs = vlans
+	}
+	wanGW := ""
+	if data.Wan != nil {
+		wanGW = data.Wan.Gateway
+	}
+	data.System.LatencyMs, data.System.LossPct = p.gatewayQuality(ctx, wanGW)
 	if hosts := arpHostnames(arp); len(hosts) > 0 {
 		data.Discovery = &probe.DiscoveryData{HostByIP: hosts}
 	}

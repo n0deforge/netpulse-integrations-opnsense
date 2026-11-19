@@ -1,5 +1,11 @@
 # Changelog
 
+## opnsense/v0.1.0-n0de.2 (n0deforge fork)
+
+- WAN latency and loss from dpinger gateway status (`Status: Gateways`).
+- Assigned IPv4 subnets sent as networks (name, CIDR, VLAN tag) and the VLAN of every ARP MAC, from the interface it is learned on.
+- Documented the traffic privileges and the NetFlow prerequisite of Network Insight.
+
 ## opnsense/v0.1.0-n0de.1 (n0deforge fork)
 
 - DHCP leases from Kea, dnsmasq and ISC, merged by MAC; expired leases dropped, reservations kept.
